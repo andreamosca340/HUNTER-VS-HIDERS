@@ -1,0 +1,556 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Hunters vs Hiders</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Big+Shoulders+Display:wght@700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one phone-width column. Lobby screens are plain lists; the game screen is an orienteering-style field map with a 60 minute timeline above it. */
+:root{
+  --bg:#EDF0E6; --surface:#F7F9F2; --ink:#1B2A20; --muted:#5A6A5E; --line:#C9D2C0;
+  --hunter:#C4115F; --on-hunter:#FFFFFF; --hider:#0B7A5A; --on-hider:#FFFFFF;
+  --map:#F5F8EC; --contour:#A98258; --grid:#8FA9C4; --danger:#B3261E;
+  --f-display:'Big Shoulders Display','Archivo',system-ui,sans-serif;
+  --f-body:'Archivo',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1610; --surface:#16211A; --ink:#E4ECE2; --muted:#93A396; --line:#2A3A2F;
+    --hunter:#FF5C9D; --on-hunter:#1A0610; --hider:#4FD6A4; --on-hider:#06231A;
+    --map:#111C15; --contour:#7A6246; --grid:#35506B; --danger:#FF8A80; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1610; --surface:#16211A; --ink:#E4ECE2; --muted:#93A396; --line:#2A3A2F;
+  --hunter:#FF5C9D; --on-hunter:#1A0610; --hider:#4FD6A4; --on-hider:#06231A;
+  --map:#111C15; --contour:#7A6246; --grid:#35506B; --danger:#FF8A80; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-block:16px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{margin:0;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.03em;font-weight:800;text-wrap:balance;line-height:1.05}
+h2{font-size:24px}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .small{font-size:13px} .grow{flex:1;min-width:0}
+.err{color:var(--danger);font-weight:600}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-size:32px}
+.brand i{font-style:normal;color:var(--hunter);margin:0 .22em;font-weight:700}
+.chip{border:1px solid var(--line);background:var(--surface);padding:4px 12px;border-radius:999px;font-weight:600;font-size:13px;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stack{display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);min-width:0}
+.row:last-child{border-bottom:0}
+.btn{appearance:none;border:1px solid var(--ink);background:transparent;color:var(--ink);font:600 15px var(--f-body);padding:10px 16px;border-radius:6px;cursor:pointer;min-height:44px}
+.btn.primary{background:var(--hunter);border-color:var(--hunter);color:var(--on-hunter)}
+.btn.small{min-height:36px;padding:6px 12px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,input:focus-visible,.tab:focus-visible{outline:3px solid var(--hunter);outline-offset:2px}
+.field{display:flex;gap:8px}
+input[type=text]{flex:1;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;min-height:44px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:6px;overflow:hidden}
+.tab{appearance:none;border:0;background:transparent;color:var(--ink);font:700 14px var(--f-body);padding:11px;cursor:pointer;min-height:44px;letter-spacing:.02em}
+.tab[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.tab+.tab{border-left:1px solid var(--ink)}
+.badge{display:inline-block;min-width:20px;padding:0 6px;border-radius:10px;background:var(--hunter);color:var(--on-hunter);font-size:12px;line-height:20px;text-align:center}
+.badge.ghost{background:var(--line);color:var(--ink)}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;border-top:1px solid var(--ink);padding-top:14px}
+.rules div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.rules b{font-size:24px;line-height:1}
+.rules span{font-size:12.5px;color:var(--muted)}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.slot{min-height:84px;border:1px solid var(--ink);border-radius:6px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;gap:6px;min-width:0;background:var(--surface)}
+.slot.empty{border-style:dashed;border-color:var(--muted);color:var(--muted);background:transparent}
+.slot .nm{font-family:var(--f-display);font-weight:800;font-size:26px;line-height:1;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font:700 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.code{font:700 34px var(--f-mono);letter-spacing:.12em}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips .btn{min-height:36px;padding:6px 12px;font-size:13px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--hunter)}
+.toast{background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:6px;font-weight:600}
+.role{border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.role.hunter{background:var(--hunter);color:var(--on-hunter)}
+.role.hider{background:var(--hider);color:var(--on-hider)}
+.role h2{font-size:44px}
+.role .tag{color:inherit;opacity:.85}
+.clock{display:flex;align-items:baseline;justify-content:space-between;gap:4px 16px;flex-wrap:wrap}
+.big{font:700 52px/1 var(--f-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tl{position:relative;height:10px;background:var(--line);border-radius:5px;margin-top:6px}
+.tl .fill{height:100%;background:var(--ink);border-radius:5px 0 0 5px;width:0}
+.tl .t{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--hunter);margin-left:-1px}
+.tl-l{position:relative;height:18px;font:500 11px var(--f-mono);color:var(--muted)}
+.tl-l span{position:absolute;transform:translateX(-50%)}
+.flash{background:var(--hunter);color:var(--on-hunter);padding:10px 14px;border-radius:6px;font-weight:700}
+#map,#endmap{width:100%;aspect-ratio:1;display:block;border-radius:6px;background:var(--bg);max-width:100%}
+#map{touch-action:none;cursor:crosshair}
+.m-bg{fill:var(--map);stroke:var(--ink);stroke-width:.35}
+.c{fill:none;stroke:var(--contour);stroke-width:.22;opacity:.8}
+.c-idx{fill:none;stroke:var(--contour);stroke-width:.5}
+.gline{stroke:var(--grid);stroke-width:.2;opacity:.7}
+.gl{font:500 2.6px var(--f-mono);fill:var(--muted)}
+.north{fill:var(--ink)}
+.lbl{font:600 2.7px var(--f-body);fill:var(--ink);paint-order:stroke;stroke:var(--map);stroke-width:.9px;stroke-linejoin:round}
+.mk{font:700 3.2px var(--f-body)}
+.mk-h{fill:var(--on-hunter)} .mk-d{fill:var(--on-hider)}
+.h-dot{fill:var(--hunter)} .d-dot{fill:var(--hider)}
+.ring{fill:none;stroke:var(--ink);stroke-width:.4;stroke-dasharray:1.2 .8}
+.trail{fill:none;stroke:var(--hider);stroke-width:.4;stroke-dasharray:1.4 1}
+.pingdot{fill:var(--map);stroke:var(--hider);stroke-width:.9}
+.pingold{fill:var(--hider);opacity:.45}
+.x{stroke:var(--danger);stroke-width:.9;stroke-linecap:round;fill:none}
+.pulse{fill:none;stroke:var(--hider);stroke-width:.5;animation:pulse 2s ease-out infinite}
+@keyframes pulse{from{r:3;opacity:.9}to{r:9;opacity:0}}
+@media (prefers-reduced-motion: reduce){.pulse{animation:none}}
+.cap{display:flex;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font:700 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;border:1px solid currentColor}
+.pill.h{color:var(--hunter)} .pill.d{color:var(--hider)}
+.pill.x{color:var(--danger);animation:none;stroke:none;fill:none}
+.endbanner{border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:6px}
+.endbanner h2{font-size:46px}
+.boot{padding:40px 0;text-align:center;color:var(--muted)}
+</style>
+<div id="app" class="wrap"><div class="boot">Caricamento…</div></div>
+<script>
+(function(){
+const $app=document.getElementById('app');
+const CODE_CHARS='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const COLS='ABCDEFGHIJ';
+const S={ready:false,error:null,db:null,uid:null,nick:null,key:null,friends:[],tab:'lobby',canWrite:null,
+  invites:[],code:null,lobby:null,members:[],pos:{},reveals:[],caught:{},myLoc:null,
+  flash:null,confirm:null,toast:null,busy:false,nickErr:'',friendErr:'',inviteErr:'',lastK:undefined,winnerWritten:false,lastW:null};
+let unsubLobby=[],unsubInv=null,dragging=false,pendingRender=false,timer=null;
+const inflight=new Set();
+
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}catch(_){return null}}
+const ref=(x,y)=>COLS[Math.min(9,Math.max(0,Math.floor(x*10)))]+(Math.min(9,Math.max(0,Math.floor(y*10)))+1);
+const mmss=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const nickOf=u=>{const m=S.members.find(m=>m.uid===u);if(m)return m.nick;const r=S.reveals.find(r=>r.uid===u);if(r&&r.nick)return r.nick;const p=S.pos[u];return(p&&p.nick)||'?'};
+const revsOf=u=>S.reveals.filter(r=>r.uid===u).sort((a,b)=>a.k-b.k);
+const agoStr=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?'adesso':m+' min fa'};
+
+function params(l){const fast=!!(l&&l.fast);return{gameMs:fast?6*60000:3600000,pingMs:fast?60000:600000}}
+function clock(l,now){
+  if(!l||!l.startedAt)return null;
+  const p=params(l),n=p.gameMs/p.pingMs,el=now-l.startedAt;
+  const k=Math.max(0,Math.min(Math.floor(el/p.pingMs),n-1));
+  return{el,left:Math.max(0,p.gameMs-el),k,next:(k+1<n)?l.startedAt+(k+1)*p.pingMs-now:null,over:el>=p.gameMs,gameMs:p.gameMs,pingMs:p.pingMs,n};
+}
+function hidersOf(l){const r=(l&&l.roles)||{};return Object.keys(r).filter(u=>r[u]==='hider')}
+function huntersOf(l){const r=(l&&l.roles)||{};return Object.keys(r).filter(u=>r[u]==='hunter')}
+function computeWinner(){
+  const l=S.lobby;if(!l||l.status==='waiting'||l.status==='closed')return null;
+  if(l.winner)return l.winner;
+  const h=hidersOf(l);
+  if(h.length&&h.every(u=>S.caught[u]))return 'hunters';
+  const c=clock(l,Date.now());
+  if(c&&c.over)return 'hiders';
+  return null;
+}
+
+/* ---------- static map layers ---------- */
+const CONTOURS=(function(){
+  let s=7;const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647};
+  const hills=[[28,32,30],[72,68,34],[66,20,16],[20,82,14]];let out='';
+  hills.forEach(h=>{
+    const cx=h[0],cy=h[1],R=h[2],p1=rnd()*6,p2=rnd()*6;
+    for(let r=4,i=0;r<=R;r+=4.2,i++){
+      let d='';
+      for(let a=0;a<=48;a++){
+        const t=a/48*Math.PI*2,rr=r*(1+0.14*Math.sin(t*2+p1+r*0.05)+0.07*Math.sin(t*3+p2));
+        d+=(a?'L':'M')+(cx+Math.cos(t)*rr*1.15).toFixed(1)+' '+(cy+Math.sin(t)*rr).toFixed(1);
+      }
+      out+='<path d="'+d+'Z" class="'+(i%4===3?'c-idx':'c')+'"/>';
+    }
+  });
+  return out;
+})();
+const GRID=(function(){
+  let g='';
+  for(let i=0;i<=10;i++){g+='<line x1="'+i*10+'" y1="0" x2="'+i*10+'" y2="100" class="gline"/><line x1="0" y1="'+i*10+'" x2="100" y2="'+i*10+'" class="gline"/>';}
+  for(let i=0;i<10;i++){g+='<text x="'+(i*10+5)+'" y="-2" text-anchor="middle" class="gl">'+COLS[i]+'</text><text x="-2" y="'+(i*10+6)+'" text-anchor="end" class="gl">'+(i+1)+'</text>';}
+  g+='<g transform="translate(93 9)"><path d="M0 -5 L2.2 2 L0 .8 L-2.2 2Z" class="north"/><text y="6.5" text-anchor="middle" class="gl">N</text></g>';
+  return g;
+})();
+
+/* ---------- views ---------- */
+const header=()=>'<header class="top"><h1 class="brand">Hunters<i>vs</i>Hiders</h1>'+(S.nick?'<span class="chip" title="Il tuo nickname">'+esc(S.nick)+'</span>':'')+'</header>';
+
+function view(){
+  if(S.error==='unsupported')return header()+'<section class="stack"><h2>Serve l\'archivio condiviso</h2><p>Per giocare in più persone la pagina ha bisogno dell\'archivio condiviso di Claude. Aprila dall\'app o da claude.ai con un account a cui è stata condivisa.</p></section>';
+  if(S.error==='readonly')return header()+'<section class="stack"><h2>Accesso in sola lettura</h2><p>Con questo livello di accesso non puoi giocare. Chiedi a chi ti ha condiviso la pagina di darti il livello Contributor.</p></section>';
+  if(!S.ready)return '<div class="boot">Caricamento…</div>';
+  if(!S.nick)return header()+nickView();
+  let body;
+  if(S.code&&S.lobby){
+    const st=S.lobby.status,w=computeWinner();
+    if(st==='ended'||(st==='playing'&&w))body=endView(w||S.lobby.winner);
+    else if(st==='playing')body=gameView();
+    else body=lobbyView();
+  }else if(S.code){body='<div class="boot">Apro la lobby…</div>'}
+  else body=homeView();
+  return header()+(S.toast?'<div class="toast" role="status">'+esc(S.toast)+'</div>':'')+body;
+}
+
+function nickView(){
+  return '<section class="stack"><h2>Scegli il tuo nickname</h2><p class="muted">I tuoi amici ti troveranno con questo nome. Da 3 a 16 caratteri: lettere, numeri, punto, trattino o underscore.</p>'+
+  '<form class="field" data-form="nick"><input id="nick" type="text" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="es. Ombra_92" aria-label="Nickname"><button class="btn primary"'+(S.busy?' disabled':'')+'>Continua</button></form>'+
+  (S.nickErr?'<p class="err" role="alert">'+esc(S.nickErr)+'</p>':'')+'</section>';
+}
+
+function homeView(){
+  const inv=S.invites.filter(l=>l.code!==S.code);
+  const tabs='<nav class="tabs"><button class="tab" data-act="tab" data-v="lobby" aria-pressed="'+(S.tab==='lobby')+'">Lobby'+(inv.length?' <b class="badge">'+inv.length+'</b>':'')+'</button>'+
+    '<button class="tab" data-act="tab" data-v="friends" aria-pressed="'+(S.tab==='friends')+'">Amici <b class="badge ghost">'+S.friends.length+'</b></button></nav>';
+  return tabs+(S.tab==='friends'?friendsTab():lobbyTab(inv));
+}
+function lobbyTab(inv){
+  return (inv.length?'<section class="stack"><h2>Inviti ricevuti</h2><div>'+inv.map(l=>'<div class="row"><div class="grow"><b>'+esc(l.hostNick)+'</b> ti ha invitato<div class="muted small">Lobby <span class="mono">'+esc(l.code)+'</span></div></div><button class="btn primary" data-act="accept" data-code="'+esc(l.code)+'"'+(S.busy?' disabled':'')+'>Entra</button></div>').join('')+'</div></section>':'')+
+  '<section class="stack"><h2>Nuova partita</h2><p>Crea una lobby, invita 3 amici con il loro nickname e avvia quando siete in 4.</p><button class="btn primary" data-act="create"'+(S.busy?' disabled':'')+'>Crea lobby</button></section>'+
+  '<section class="stack"><div class="rules"><div><b class="mono">2 + 2</b><span>HUNTER contro HIDERS, sorteggiati all\'avvio</span></div><div><b class="mono">60\'</b><span>di tempo agli HUNTER per trovare tutti</span></div><div><b class="mono">10\'</b><span>tra un ping e l\'altro con la posizione degli HIDERS</span></div></div>'+
+  '<p class="muted small">Vincono gli HIDERS se nessuno viene trovato entro un\'ora, gli HUNTER se li trovano tutti.</p></section>';
+}
+function friendsTab(){
+  return '<section class="stack"><h2>Aggiungi amico</h2><form class="field" data-form="friend"><input id="friend" type="text" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Nickname del tuo amico" aria-label="Nickname amico"><button class="btn primary">Aggiungi</button></form>'+
+  (S.friendErr?'<p class="err" role="alert">'+esc(S.friendErr)+'</p>':'')+'</section>'+
+  '<section class="stack"><h2>I tuoi amici</h2>'+(S.friends.length?'<div>'+S.friends.map(f=>'<div class="row"><span class="grow"><b>'+esc(f.nick)+'</b></span><button class="btn small" data-act="unfriend" data-uid="'+esc(f.uid)+'">Rimuovi</button></div>').join('')+'</div>':'<p class="muted">Ancora nessun amico. Chiedi il nickname a chi vuoi invitare e aggiungilo qui.</p>')+'</section>';
+}
+
+function lobbyView(){
+  const l=S.lobby,isHost=l.host===S.uid,keys=l.invitedKeys||[];
+  const slots=[];for(let i=0;i<4;i++)slots.push(S.members[i]);
+  const pending=(l.invited||[]).filter(n=>!S.members.some(m=>m.nick.toLowerCase()===n.toLowerCase()));
+  const need=4-S.members.length;
+  const avail=S.friends.filter(f=>!S.members.some(m=>m.uid===f.uid)&&!keys.includes(f.nick.toLowerCase()));
+  let h='<div class="row" style="border:0;padding:0"><div class="grow"><div class="tag">Lobby</div><div class="code">'+esc(l.code)+'</div></div><button class="btn small" data-act="leave">Esci</button></div>';
+  h+='<section class="stack"><div class="tag">Giocatori '+S.members.length+'/4</div><div class="slots">'+slots.map(m=>m?'<div class="slot"><span class="tag">'+(m.uid===l.host?'Host':'Pronto')+'</span><span class="nm">'+esc(m.nick)+'</span></div>':'<div class="slot empty"><span class="tag">Libero</span><span>In attesa…</span></div>').join('')+'</div>'+
+    (pending.length?'<p class="muted small">Invitati, non ancora entrati: '+pending.map(esc).join(', ')+'</p>':'')+'</section>';
+  if(isHost&&need>0){
+    h+='<section class="stack"><h2>Invita</h2>'+(avail.length?'<div class="chips">'+avail.map(f=>'<button class="btn" data-act="invite" data-nick="'+esc(f.nick)+'">+ '+esc(f.nick)+'</button>').join('')+'</div>':'')+
+    '<form class="field" data-form="invite"><input id="invnick" type="text" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Nickname" aria-label="Nickname da invitare"><button class="btn">Invita</button></form>'+
+    (S.inviteErr?'<p class="err" role="alert">'+esc(S.inviteErr)+'</p>':'')+'</section>';
+  }
+  if(isHost)h+='<label class="check"><input type="checkbox" id="fast"'+(l.fast?' checked':'')+'><span><b>Modalità test</b><br><span class="muted small">Partita di 6 minuti con un ping ogni minuto, per provare l\'app.</span></span></label>';
+  else if(l.fast)h+='<p class="muted small">Modalità test: 6 minuti, un ping ogni minuto.</p>';
+  h+=isHost?'<button class="btn primary" data-act="start"'+(need>0?' disabled':'')+'>'+(need>0?'Mancano '+need+' giocatori':'Avvia partita')+'</button>':'<p class="muted">In attesa che <b>'+esc(l.hostNick)+'</b> avvii la partita.</p>';
+  return h;
+}
+
+function mapHTML(interactive,ended){
+  const l=S.lobby,roles=l.roles||{};let g='';
+  hidersOf(l).forEach(u=>{
+    const rv=revsOf(u);if(!rv.length)return;const caught=!!S.caught[u];
+    if(rv.length>1)g+='<polyline points="'+rv.map(r=>(r.x*100).toFixed(1)+','+(r.y*100).toFixed(1)).join(' ')+'" class="trail"/>';
+    rv.forEach((r,i)=>{
+      const x=(r.x*100).toFixed(1),y=(r.y*100).toFixed(1);
+      if(i<rv.length-1){g+='<circle cx="'+x+'" cy="'+y+'" r="1.6" class="pingold"/>';return;}
+      if(!caught&&!ended)g+='<circle cx="'+x+'" cy="'+y+'" r="3" class="pulse"/>';
+      g+='<circle cx="'+x+'" cy="'+y+'" r="3.2" class="pingdot"/>';
+      if(caught)g+='<path d="M'+(r.x*100-2)+' '+(r.y*100-2)+'l4 4m0-4l-4 4" class="x"/>';
+      g+='<text x="'+x+'" y="'+(r.y*100+6.6)+'" text-anchor="middle" class="lbl">'+esc(nickOf(u))+' · '+(r.k===99?'finale':r.k)+'</text>';
+    });
+  });
+  const dot=(p,cls,name,me)=>'<g '+(me?'id="me" ':'')+'transform="translate('+p.x*100+' '+p.y*100+')">'+(me?'<circle r="5" class="ring"/>':'')+'<circle r="3.2" class="'+cls+'"/><text y="1.2" text-anchor="middle" class="mk '+(cls==='h-dot'?'mk-h':'mk-d')+'">'+esc((name||'?')[0].toUpperCase())+'</text><text y="7.4" text-anchor="middle" class="lbl">'+(me?'TU':esc(name))+'</text></g>';
+  huntersOf(l).forEach(u=>{const p=u===S.uid?S.myLoc:S.pos[u];if(p)g+=dot(p,'h-dot',nickOf(u),u===S.uid&&interactive)});
+  if(!ended&&roles[S.uid]==='hider'&&S.myLoc&&!S.caught[S.uid])g+=dot(S.myLoc,'d-dot',S.nick,true);
+  return '<svg '+(interactive?'id="map"':'id="endmap"')+' viewBox="-6 -6 112 112" role="img" aria-label="Mappa dell\'arena con griglia da A1 a J10"><defs><clipPath id="clip"><rect width="100" height="100"/></clipPath></defs><rect width="100" height="100" class="m-bg"/><g clip-path="url(#clip)">'+CONTOURS+'</g>'+GRID+g+'</svg>';
+}
+
+function gameView(){
+  const l=S.lobby,role=(l.roles||{})[S.uid],isH=role==='hunter',c=clock(l,Date.now());
+  const caughtMe=!!S.caught[S.uid],canMove=!caughtMe,mates=(isH?huntersOf(l):hidersOf(l)).filter(u=>u!==S.uid);
+  let h='';
+  h+='<section class="role '+(isH?'hunter':'hider')+'"><span class="tag">La tua squadra'+(mates.length?' · con '+mates.map(u=>esc(nickOf(u))).join(', '):'')+'</span><h2>'+(isH?'Hunter':'Hiders')+'</h2><p>'+(isH?'Trova i 2 HIDERS prima che scada il tempo.':'Nasconditi. Gli HUNTER vedono la tua posizione solo a ogni ping.')+'</p></section>';
+  if(S.flash)h+='<div class="flash" role="status">'+esc(S.flash)+'</div>';
+  if(caughtMe)h+='<div class="flash" role="status">Sei stato trovato da '+esc(S.caught[S.uid].by)+'. Resta a guardare.</div>';
+  const ticks=[],lab=[];for(let i=1;i<c.n;i++){const pc=i/c.n*100;ticks.push('<i class="t" style="left:'+pc+'%"></i>');lab.push('<span style="left:'+pc+'%">'+(i*c.pingMs/60000)+'\'</span>')}
+  h+='<section class="stack"><div class="clock"><span class="big" id="left">'+mmss(c.left)+'</span><span class="muted" id="next">'+(c.next!=null?'Prossimo ping tra '+mmss(c.next):'Ultimo ping inviato')+'</span></div><div class="tl"><div class="fill" id="fill" style="width:'+Math.min(100,c.el/c.gameMs*100)+'%"></div>'+ticks.join('')+'</div><div class="tl-l">'+lab.join('')+'</div></section>';
+  h+='<section class="stack">'+mapHTML(canMove,false)+'<div class="cap"><span>Tu: <b class="mono" id="mepos">'+(S.myLoc?ref(S.myLoc.x,S.myLoc.y):'—')+'</b></span><span>'+(canMove?(isH?'Tocca la mappa per segnare dove sei.':'Tocca la mappa per segnare dove ti nascondi.'):'Posizione bloccata.')+'</span></div><p class="muted small">Posizione manuale: in questa versione non c\'è il GPS, ognuno sposta il proprio punto sulla mappa.</p></section>';
+  if(isH){
+    h+='<section class="stack"><h2>HIDERS</h2><div>'+hidersOf(l).map(u=>{
+      const cg=S.caught[u],rv=revsOf(u).filter(r=>r.k!==99),last=rv[rv.length-1];
+      const st=cg?'Trovato da '+esc(cg.by):(last?'Ping '+last.k+' · <span class="mono">'+ref(last.x,last.y)+'</span> · '+agoStr(last.at):'Nessun ping ancora');
+      return '<div class="row"><div class="grow"><b>'+esc(nickOf(u))+'</b><div class="muted small">'+st+'</div></div>'+(cg?'<span class="pill h">Trovato</span>':'<button class="btn small'+(S.confirm===u?' primary':'')+'" data-act="catch" data-uid="'+esc(u)+'">'+(S.confirm===u?'Conferma':'Segna trovato')+'</button>')+'</div>';
+    }).join('')+'</div></section>';
+  }else{
+    const mine=revsOf(S.uid).filter(r=>r.k!==99).map(r=>r.k);
+    h+='<section class="stack"><h2>La tua squadra</h2><div>'+hidersOf(l).map(u=>'<div class="row"><b class="grow">'+esc(nickOf(u))+(u===S.uid?' (tu)':'')+'</b><span class="pill '+(S.caught[u]?'h':'d')+'">'+(S.caught[u]?'Trovato':'Libero')+'</span></div>').join('')+'</div><p class="muted small">'+(mine.length?'Ping già inviati agli HUNTER: '+mine.join(', ')+'.':'Nessun ping ancora inviato.')+'</p></section>';
+  }
+  return h;
+}
+
+function endView(w){
+  const l=S.lobby,role=(l.roles||{})[S.uid],won=(role==='hunter')===(w==='hunters'),roles=l.roles||{};
+  const cls=w==='hunters'?'hunter':'hider';
+  let h='<section class="endbanner role '+cls+'"><span class="tag">Partita finita</span><h2>'+(w==='hunters'?'Hunter vincono':'Hiders vincono')+'</h2><p>'+(won?'Vittoria per la tua squadra. ':'Questa volta ha perso la tua squadra. ')+(w==='hunters'?'Tutti gli HIDERS sono stati trovati.':'Il tempo è scaduto e almeno un HIDER non è stato trovato.')+'</p></section>';
+  h+='<section class="stack">'+mapHTML(false,true)+'<p class="muted small">Sulla mappa: tutti i ping degli HIDERS e la posizione finale.</p></section>';
+  h+='<section class="stack"><h2>Giocatori</h2><div>'+Object.keys(roles).map(u=>{
+    const isH=roles[u]==='hunter',cg=S.caught[u];
+    return '<div class="row"><b class="grow">'+esc(nickOf(u))+'</b><span class="muted small">'+(isH?'':(cg?'trovato da '+esc(cg.by):'mai trovato'))+'</span><span class="pill '+(isH?'h':'d')+'">'+(isH?'Hunter':'Hider')+'</span></div>';
+  }).join('')+'</div></section><button class="btn primary" data-act="exit">Torna alla home</button>';
+  return h;
+}
+
+/* ---------- render ---------- */
+function captureInputs(){
+  const a=document.activeElement,vals={};
+  $app.querySelectorAll('input[type=text]').forEach(i=>{vals[i.id]=i.value});
+  return{vals:vals,focus:(a&&a.id&&$app.contains(a))?a.id:null,sel:(a&&a.selectionStart!=null)?[a.selectionStart,a.selectionEnd]:null};
+}
+function restoreInputs(k){
+  for(const id in k.vals){const el=document.getElementById(id);if(el&&k.vals[id])el.value=k.vals[id];}
+  if(k.focus){const el=document.getElementById(k.focus);if(el){el.focus();if(k.sel&&el.setSelectionRange){try{el.setSelectionRange(k.sel[0],k.sel[1])}catch(_){}}}}
+}
+function render(){
+  if(dragging){pendingRender=true;return}
+  const k=captureInputs();
+  $app.innerHTML=view();
+  restoreInputs(k);
+}
+function setToast(m){S.toast=m;render();setTimeout(()=>{if(S.toast===m){S.toast=null;render()}},3500)}
+function fail(err){
+  S.busy=false;
+  const c=err&&err.code;
+  setToast(c==='invalid_argument'||c==='not_granted'?'Operazione non consentita. Serve il livello Contributor.':'Qualcosa è andato storto. Riprova.');
+}
+
+/* ---------- data ---------- */
+async function boot(){
+  try{
+    if(!window.claude||!window.claude.use){S.error='unsupported';S.ready=true;return render()}
+    const r=await Promise.all([window.claude.use('db'),window.claude.use('user')]);
+    const db=r[0],user=r[1];
+    if(!db||!user){S.error='unsupported';S.ready=true;return render()}
+    S.db=db;S.uid=await user.id();
+    if(!S.uid){S.error='unsupported';S.ready=true;return render()}
+    try{S.canWrite=await user.can('data.write')}catch(_){S.canWrite=null}
+    if(S.canWrite===false){S.error='readonly';S.ready=true;return render()}
+    const ps=await db.doc('data/users/'+S.uid+'/profile').get();
+    if(ps.exists){const d=ps.data();S.nick=d.nick;S.key=String(d.nick).toLowerCase();S.friends=d.friends||[];afterLogin()}
+  }catch(e){S.error='unsupported'}
+  S.ready=true;render();
+}
+function afterLogin(){
+  if(unsubInv)unsubInv();
+  unsubInv=S.db.collection('lobbies').where('invitedKeys','array-contains',S.key).onSnapshot(snap=>{
+    S.invites=snap.docs.map(d=>d.data()).filter(l=>l.status==='waiting');render();
+  },()=>{});
+  const c=ls('hh_code');if(c)openLobby(c);
+  if(!timer)timer=setInterval(tick,1000);
+}
+async function submitNick(v){
+  S.nickErr='';const nick=v.trim();
+  if(!/^[A-Za-z0-9_.-]{3,16}$/.test(nick)){S.nickErr='Usa da 3 a 16 caratteri: lettere, numeri, punto, trattino o underscore.';render();return false}
+  S.busy=true;render();
+  try{
+    const key=nick.toLowerCase(),r=S.db.doc('nicks/'+key);let got=true;
+    try{const a=await r.acquire({holder:S.uid,ttlMs:4000});got=a.acquired}catch(_){}
+    if(!got){S.nickErr='Un altro giocatore sta scegliendo questo nickname. Riprova tra un attimo.';S.busy=false;render();return false}
+    const snap=await r.get(),d=snap.exists?snap.data():null;
+    if(d&&d.uid&&d.uid!==S.uid){S.nickErr='Nickname già in uso. Scegline un altro.';S.busy=false;render();return false}
+    await r.set({uid:S.uid,nick:nick,key:key});
+    await S.db.doc('data/users/'+S.uid+'/profile').set({nick:nick,friends:[]});
+    S.nick=nick;S.key=key;S.friends=[];S.busy=false;afterLogin();render();return true;
+  }catch(e){S.busy=false;S.nickErr='Non riesco a salvare il nickname. Riprova.';render();return false}
+}
+async function addFriend(v){
+  S.friendErr='';const nick=v.trim(),key=nick.toLowerCase();
+  if(!nick){return false}
+  if(key===S.key){S.friendErr='Questo sei tu.';render();return false}
+  if(S.friends.some(f=>f.nick.toLowerCase()===key)){S.friendErr=nick+' è già tra i tuoi amici.';render();return false}
+  try{
+    const s=await S.db.doc('nicks/'+key).get(),d=s.exists?s.data():null;
+    if(!d||!d.uid){S.friendErr='Nessun giocatore si chiama «'+nick+'».';render();return false}
+    const friends=S.friends.concat([{nick:d.nick,uid:d.uid}]);
+    await S.db.doc('data/users/'+S.uid+'/profile').update({friends:friends});
+    S.friends=friends;setToast(d.nick+' aggiunto agli amici');return true;
+  }catch(e){fail(e);return false}
+}
+async function removeFriend(uid){
+  try{const friends=S.friends.filter(f=>f.uid!==uid);await S.db.doc('data/users/'+S.uid+'/profile').update({friends:friends});S.friends=friends;render()}catch(e){fail(e)}
+}
+function genCode(){let c='';for(let i=0;i<4;i++)c+=CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)];return c}
+async function createLobby(){
+  S.busy=true;render();const code=genCode();
+  try{
+    await S.db.doc('lobbies/'+code).set({code:code,host:S.uid,hostNick:S.nick,status:'waiting',invited:[],invitedKeys:[],fast:false,createdAt:Date.now()});
+    await S.db.doc('lobbies/'+code+'/members/'+S.uid).set({uid:S.uid,nick:S.nick,joinedAt:Date.now()});
+    S.busy=false;openLobby(code);
+  }catch(e){fail(e)}
+}
+async function acceptInvite(code){
+  S.busy=true;render();
+  try{
+    const ms=await S.db.collection('lobbies/'+code+'/members').get();
+    if(ms.size>=4&&!ms.docs.some(d=>d.id===S.uid)){S.busy=false;return setToast('La lobby è già piena.')}
+    await S.db.doc('lobbies/'+code+'/members/'+S.uid).set({uid:S.uid,nick:S.nick,joinedAt:Date.now()});
+    S.busy=false;openLobby(code);
+  }catch(e){fail(e)}
+}
+async function inviteNick(nick){
+  S.inviteErr='';const l=S.lobby,key=nick.trim().toLowerCase();
+  if(!key)return false;
+  if(key===S.key){S.inviteErr='Sei già nella lobby.';render();return false}
+  if(S.members.some(m=>m.nick.toLowerCase()===key)||(l.invitedKeys||[]).includes(key)){S.inviteErr=nick+' è già dentro o invitato.';render();return false}
+  try{
+    const s=await S.db.doc('nicks/'+key).get(),d=s.exists?s.data():null;
+    if(!d||!d.uid){S.inviteErr='Nessun giocatore si chiama «'+nick.trim()+'».';render();return false}
+    await S.db.doc('lobbies/'+S.code).update({invited:(l.invited||[]).concat([d.nick]),invitedKeys:(l.invitedKeys||[]).concat([key])});
+    setToast('Invito inviato a '+d.nick);return true;
+  }catch(e){fail(e);return false}
+}
+async function startGame(){
+  const ids=S.members.map(m=>m.uid);if(ids.length!==4)return;
+  for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=ids[i];ids[i]=ids[j];ids[j]=t}
+  const roles={};ids.forEach((u,i)=>{roles[u]=i<2?'hunter':'hider'});
+  try{await S.db.doc('lobbies/'+S.code).update({status:'playing',roles:roles,startedAt:Date.now()})}catch(e){fail(e)}
+}
+async function leave(){
+  const code=S.code,l=S.lobby;
+  try{
+    if(l&&l.host===S.uid)await S.db.doc('lobbies/'+code).update({status:'closed'});
+    else await S.db.doc('lobbies/'+code+'/members/'+S.uid).delete();
+  }catch(_){}
+  closeLobby();render();
+}
+function catchHider(u){
+  if(S.confirm!==u){S.confirm=u;render();setTimeout(()=>{if(S.confirm===u){S.confirm=null;render()}},4000);return}
+  S.confirm=null;
+  S.db.doc('lobbies/'+S.code+'/caught/'+u).set({uid:u,by:S.nick,at:Date.now()}).catch(fail);
+  render();
+}
+
+function openLobby(code){
+  closeLobby();S.code=code;ls('hh_code',code);
+  const db=S.db,base='lobbies/'+code,er=()=>{};
+  unsubLobby.push(db.doc(base).onSnapshot(s=>{
+    if(!s.exists){if(S.code===code)gone('La lobby non esiste più.');return}
+    S.lobby=s.data();
+    if(S.lobby.status==='closed'){gone('L\'host ha chiuso la lobby.');return}
+    if(S.lobby.status==='playing')initGame();
+    render();
+  },er));
+  unsubLobby.push(db.collection(base+'/members').onSnapshot(s=>{S.members=s.docs.map(d=>d.data()).sort((a,b)=>a.joinedAt-b.joinedAt);render()},er));
+  unsubLobby.push(db.collection(base+'/pos').onSnapshot(s=>{S.pos={};s.docs.forEach(d=>{S.pos[d.id]=d.data()});render()},er));
+  unsubLobby.push(db.collection(base+'/reveals').onSnapshot(s=>{S.reveals=s.docs.map(d=>d.data());render()},er));
+  unsubLobby.push(db.collection(base+'/caught').onSnapshot(s=>{S.caught={};s.docs.forEach(d=>{S.caught[d.id]=d.data()});render()},er));
+  render();
+}
+function closeLobby(){
+  unsubLobby.forEach(f=>{try{f()}catch(_){}});unsubLobby=[];
+  if(S.code)ls('hh_loc_'+S.code,null);
+  S.code=null;S.lobby=null;S.members=[];S.pos={};S.reveals=[];S.caught={};S.myLoc=null;S.flash=null;S.confirm=null;
+  S.lastK=undefined;S.winnerWritten=false;S.lastW=null;inflight.clear();ls('hh_code',null);
+}
+function gone(msg){closeLobby();S.toast=msg;render();setTimeout(()=>{if(S.toast===msg){S.toast=null;render()}},3500)}
+
+function initGame(){
+  if(S.myLoc)return;
+  let loc=null;try{loc=JSON.parse(ls('hh_loc_'+S.code)||'null')}catch(_){}
+  S.myLoc=loc||{x:.5,y:.5};
+  const c=clock(S.lobby,Date.now());S.lastK=c?c.k:0;
+  if((S.lobby.roles||{})[S.uid]==='hunter')writePos();
+}
+function writePos(){
+  if(!S.myLoc)return;
+  S.db.doc('lobbies/'+S.code+'/pos/'+S.uid).set({uid:S.uid,nick:S.nick,x:S.myLoc.x,y:S.myLoc.y,at:Date.now()}).catch(()=>{});
+}
+
+/* ---------- game clock ---------- */
+function writeReveal(id,k){
+  if(inflight.has(id))return;inflight.add(id);
+  const p=S.myLoc||{x:.5,y:.5};
+  S.db.doc('lobbies/'+S.code+'/reveals/'+id).set({id:id,uid:S.uid,nick:S.nick,k:k,x:p.x,y:p.y,at:Date.now()}).catch(()=>inflight.delete(id));
+}
+function updateClock(){
+  const l=S.lobby,L=document.getElementById('left');if(!L||!l||!l.startedAt)return;
+  const c=clock(l,Date.now());
+  L.textContent=mmss(c.left);
+  const N=document.getElementById('next');if(N)N.textContent=c.next!=null?'Prossimo ping tra '+mmss(c.next):'Ultimo ping inviato';
+  const F=document.getElementById('fill');if(F)F.style.width=Math.min(100,c.el/c.gameMs*100)+'%';
+}
+function tick(){
+  const l=S.lobby;if(!S.code||!l||(l.status!=='playing'&&l.status!=='ended'))return;
+  const now=Date.now(),c=clock(l,now),role=(l.roles||{})[S.uid];if(!c)return;
+  const w=computeWinner();
+  if(l.status==='playing'){
+    if(S.lastK!==undefined&&c.k>S.lastK&&!w){
+      S.lastK=c.k;
+      const msg='Ping '+c.k+': posizioni degli HIDERS aggiornate.';S.flash=msg;render();
+      setTimeout(()=>{if(S.flash===msg){S.flash=null;render()}},8000);
+    }
+    if(role==='hider'&&!S.caught[S.uid]&&!w){
+      for(let k=1;k<=c.k;k++){const id=S.uid+'_'+k;if(!S.reveals.some(r=>r.id===id))writeReveal(id,k)}
+    }
+  }
+  if(w){
+    if(role==='hider'&&(!l.endedAt||now-l.endedAt<90000)){const id=S.uid+'_end';if(!S.reveals.some(r=>r.id===id))writeReveal(id,99)}
+    if(l.status==='playing'&&!S.winnerWritten){
+      S.winnerWritten=true;
+      S.db.doc('lobbies/'+S.code).update({status:'ended',winner:w,endedAt:now}).catch(()=>{S.winnerWritten=false});
+    }
+    if(S.lastW!==w){S.lastW=w;render()}
+  }else updateClock();
+}
+
+/* ---------- map interaction ---------- */
+function moveTo(e,svg){
+  const r=svg.getBoundingClientRect();
+  const x=Math.min(1,Math.max(0,((e.clientX-r.left)/r.width*112-6)/100));
+  const y=Math.min(1,Math.max(0,((e.clientY-r.top)/r.height*112-6)/100));
+  S.myLoc={x:x,y:y};
+  const me=document.getElementById('me');if(me)me.setAttribute('transform','translate('+x*100+' '+y*100+')');
+  const p=document.getElementById('mepos');if(p)p.textContent=ref(x,y);
+}
+$app.addEventListener('pointerdown',e=>{
+  const m=e.target.closest('#map');if(!m)return;
+  dragging=true;try{m.setPointerCapture(e.pointerId)}catch(_){}
+  moveTo(e,m);
+});
+$app.addEventListener('pointermove',e=>{if(!dragging)return;const m=document.getElementById('map');if(m)moveTo(e,m)});
+function endDrag(){
+  if(!dragging)return;dragging=false;
+  if(S.myLoc){ls('hh_loc_'+S.code,JSON.stringify(S.myLoc));if(((S.lobby||{}).roles||{})[S.uid]==='hunter')writePos()}
+  if(pendingRender){pendingRender=false;render()}
+}
+$app.addEventListener('pointerup',endDrag);
+$app.addEventListener('pointercancel',endDrag);
+
+/* ---------- events ---------- */
+async function act(a,d){
+  try{
+    switch(a){
+      case 'tab':S.tab=d.v;render();break;
+      case 'create':await createLobby();break;
+      case 'accept':await acceptInvite(d.code);break;
+      case 'leave':await leave();break;
+      case 'invite':await inviteNick(d.nick);break;
+      case 'start':await startGame();break;
+      case 'unfriend':await removeFriend(d.uid);break;
+      case 'catch':catchHider(d.uid);break;
+      case 'exit':closeLobby();render();break;
+    }
+  }catch(e){fail(e)}
+}
+$app.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;act(b.dataset.act,b.dataset)});
+$app.addEventListener('submit',async e=>{
+  e.preventDefault();const f=e.target,inp=f.querySelector('input'),v=inp?inp.value:'';
+  let ok=false;
+  if(f.dataset.form==='nick')ok=await submitNick(v);
+  else if(f.dataset.form==='friend')ok=await addFriend(v);
+  else if(f.dataset.form==='invite')ok=await inviteNick(v);
+  if(ok&&inp){const el=document.getElementById(inp.id);if(el)el.value=''}
+});
+$app.addEventListener('change',e=>{
+  if(e.target.id==='fast'&&S.lobby&&S.lobby.host===S.uid)S.db.doc('lobbies/'+S.code).update({fast:e.target.checked}).catch(fail);
+});
+
+boot();
+})();
+</script>
+
+</body></html>
